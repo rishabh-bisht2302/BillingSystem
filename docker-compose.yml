@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  subscription-db:
+    image: postgres:15-alpine
+    container_name: subscription-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${SUBSCRIPTION_DB_NAME}
+      POSTGRES_USER: ${SUBSCRIPTION_DB_USER}
+      POSTGRES_PASSWORD: ${SUBSCRIPTION_DB_PASSWORD}
+    ports:
+      - '${SUBSCRIPTION_DB_PORT:-5432}:5432'
+    volumes:
+      - subscription_db_data:/var/lib/postgresql/data
+
+  payment-db:
+    image: postgres:15-alpine
+    container_name: payment-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PAYMENT_DB_NAME}
+      POSTGRES_USER: ${PAYMENT_DB_USER}
+      POSTGRES_PASSWORD: ${PAYMENT_DB_PASSWORD}
+    ports:
+      - '${PAYMENT_DB_PORT:-5433}:5432'
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+
+  subscription-service:
+    build:
+      context: ./subscription-service
+      target: production
+    container_name: subscription-service
+    depends_on:
+      - subscription-db
+    env_file:
+      - .env
+    environment:
+      PORT: ${SUBSCRIPTION_SERVICE_PORT}
+      DATABASE_HOST: ${SUBSCRIPTION_DB_HOST}
+      DATABASE_PORT: ${SUBSCRIPTION_DB_PORT}
+      DATABASE_NAME: ${SUBSCRIPTION_DB_NAME}
+      DATABASE_USER: ${SUBSCRIPTION_DB_USER}
+      DATABASE_PASSWORD: ${SUBSCRIPTION_DB_PASSWORD}
+    ports:
+      - '${SUBSCRIPTION_SERVICE_PORT:-3001}:${SUBSCRIPTION_SERVICE_PORT:-3001}'
+
+  payment-service:
+    build:
+      context: ./payment-service
+      target: production
+    container_name: payment-service
+    depends_on:
+      - payment-db
+    env_file:
+      - .env
+    environment:
+      PORT: ${PAYMENT_SERVICE_PORT}
+      DATABASE_HOST: ${PAYMENT_DB_HOST}
+      DATABASE_PORT: ${PAYMENT_DB_PORT}
+      DATABASE_NAME: ${PAYMENT_DB_NAME}
+      DATABASE_USER: ${PAYMENT_DB_USER}
+      DATABASE_PASSWORD: ${PAYMENT_DB_PASSWORD}
+    ports:
+      - '${PAYMENT_SERVICE_PORT:-3002}:${PAYMENT_SERVICE_PORT:-3002}'
+
+volumes:
+  subscription_db_data:
+  payment_db_data:
+
