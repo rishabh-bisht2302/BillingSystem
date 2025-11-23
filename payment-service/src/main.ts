@@ -18,6 +18,7 @@ async function bootstrap() {
     swaggerOptions: {
       displayRequestDuration: true,
       persistAuthorization: true,
+      defaultModelsExpandDepth: -1, // Hide schemas section
     },
   });
 

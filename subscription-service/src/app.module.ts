@@ -15,6 +15,7 @@ import { SubscriptionRenewalCronService } from './cron/subscription-renewal.cron
 import { WebhookService } from './webhook/webhook.service';
 import { MandateService } from './mandate/mandate.service';
 import { UserMandateEntity } from './mandate/mandate.entity';
+import { RabbitMqService } from './message-queue/rabbitmq.service';
 
 @Module({
   imports: [
@@ -40,6 +41,6 @@ import { UserMandateEntity } from './mandate/mandate.entity';
     LoginModule,
   ],
   controllers: [AppController],
-  providers: [AppService, SubscriptionRenewalCronService, WebhookService, MandateService],
+  providers: [AppService, SubscriptionRenewalCronService, WebhookService, MandateService, RabbitMqService],
 })
 export class AppModule {}

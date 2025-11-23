@@ -19,16 +19,25 @@ export class RabbitMqService implements OnModuleDestroy {
     this.client = new RabbitConnection({
       url: process.env.MESSAGE_QUEUE_URL ?? 'amqp://guest:guest@rabbitmq:5672',
       connectionName: 'subscription-service',
+      retryLow: 1000,      // Wait 1 second before retrying after first failure
+      retryHigh: 30000,    // Wait up to 30 seconds between retries
+      connectionTimeout: 60000, // 60 second timeout for initial connection
     });
 
     this.client.on('error', (err) => {
       console.error('RabbitMQ connection error', err);
     });
+
+    this.client.on('connection', () => {
+      console.log('RabbitMQ connection established');
+    });
   }
 
   private async ensureConnected(): Promise<void> {
     if (!this.client.ready) {
+      console.log('Waiting for RabbitMQ connection...');
       await this.client.onConnect();
+      console.log('RabbitMQ connected successfully');
     }
   }
 
@@ -83,6 +92,15 @@ export class RabbitMqService implements OnModuleDestroy {
       return '';
     }
     return JSON.stringify(msg.body);
+  }
+
+  async checkHealth(): Promise<boolean> {
+    try {
+      return this.client.ready;
+    } catch (error) {
+      console.error('Error checking RabbitMQ health', error);
+      return false;
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
