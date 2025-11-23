@@ -1,0 +1,15 @@
+export const swaggerConstants = {
+  initiatePaymentDescription: 'Creates a payment intent using the configured payment gateway and returns the client payload required to continue the checkout flow.',
+  initiatePaymentResponseDescription: 'Payment intent created successfully.',
+  initiatePaymentSummary: 'Initiate a payment for a subscription order',
+  initiateRefundSummary: 'Initiate a refund for a previously successful payment',
+  initiateRefundDescription: 'Creates a refund intent for a previously successful payment and schedules the mock gateway to process it.',
+  initiateRefundResponseDescription: 'Refund request accepted.',
+  initiateRefundPaymentIdDescription: 'Identifier of the payment that should be refunded',
+  initiateRefundSubscriptionIdDescription: 'Identifier of the subscription that should be refunded',
+  initiateRefundAmountDescription: 'Amount to refund in smallest currency unit',
+  initiateRefundReasonDescription: 'Reason for refund',
+  initiateRefundGatewayDescription: 'Gateway to use for refund',
+  initiateRefundRefundIdDescription: 'Generated refund identifier',
+  initiateRefundStatusDescription: 'Current status of the refund (initiated, success, etc)',
+}

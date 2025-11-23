@@ -1,123 +1,60 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { InitiatePaymentDto, PaymentSummary } from './interfaces/payment.interface';
 import {
-  PaymentGatewayResponse,
-  PaymentProvider,
-} from './interfaces/payment-gateway.interface';
-import { RazorpayService } from '../gateways/razorpay/razorpay.service';
-import { PaypalService } from '../gateways/paypal/paypal.service';
-import { generateReceipt } from '../utils/receipt.util';
-import { sendEmail } from '../utils/email.util';
-import { wait } from '../utils/wait.util';
+  InitiatePaymentDto,
+  InitiatePaymentResponse,
+} from './interfaces/payment.interface';
+import { PaymentEntity } from './payment.entity';
+import { RazorpayMockGateway } from '../gateways/razorpay/razorpay-mock.gateway';
+import { PaypalMockGateway } from '../gateways/paypal/paypal-mock.gateway';
+import { config } from '../config/constants';
+import { PaymentStatus } from './interfaces/payment.interface';
 
 @Injectable()
 export class PaymentService {
   constructor(
-    private readonly razorpayService: RazorpayService,
-    private readonly paypalService: PaypalService,
+    @InjectRepository(PaymentEntity)
+    private readonly paymentRepository: Repository<PaymentEntity>,
+    private readonly razorpayGateway: RazorpayMockGateway,
+    private readonly paypalGateway: PaypalMockGateway,
   ) {}
 
-  async initiatePayment(dto: InitiatePaymentDto): Promise<PaymentSummary> {
-    const gatewayResponse = this.dispatchToGateway(dto.provider, {
+  async initiatePayment(
+    dto: InitiatePaymentDto,
+  ): Promise<InitiatePaymentResponse> {
+    const payment = this.paymentRepository.create({
+      orderId: randomUUID(),
       amount: dto.amount,
-      currency: dto.currency,
-      metadata: { userId: dto.userId },
+      planId: dto.planId,
+      gateway: dto.gateway ?? 'mock',
+      status: config.paymentStatus.INITIATED as PaymentStatus,
+      subscriptionId: dto.subscriptionId,
+      previousPlanId: dto.previousPlanId ?? null,
+      actionType: dto.actionType ?? null,
     });
 
-    let captureResult: PaymentGatewayResponse | undefined;
-
-    if (gatewayResponse.status === 'success') {
-      captureResult = await this.captureWithRetries(
-        dto.provider,
-        gatewayResponse.transactionId,
-        dto.amount,
-        dto.currency,
-      );
-    }
-
-    const paymentId = randomUUID();
-    const receiptId = generateReceipt({
-      paymentId,
-      userId: dto.userId,
-      amount: dto.amount,
-      currency: dto.currency,
-    });
-
-    sendEmail({
-      to: dto.email,
-      subject: `Payment ${gatewayResponse.status}`,
-      body: `Payment ${gatewayResponse.status} with transaction ${gatewayResponse.transactionId}. Capture status: ${captureResult?.status ?? 'skipped'}. Receipt: ${receiptId}`,
-    });
+    await this.paymentRepository.save(payment);
+    await this.scheduleGatewaySimulation(payment.id, payment.gateway);
 
     return {
-      paymentId,
-      userId: dto.userId,
-      email: dto.email,
-      gatewayResponse,
-      receiptId,
-      captureResult,
+      orderId: payment.orderId,
+      paymentId: payment.id,
     };
   }
 
-  private dispatchToGateway(
-    provider: PaymentProvider,
-    payload: { amount: number; currency: string; metadata?: Record<string, unknown> },
-  ): PaymentGatewayResponse {
-    switch (provider) {
-      case 'razorpay':
-        return this.razorpayService.processPayment(payload);
-      case 'paypal':
-        return this.paypalService.processPayment(payload);
+  private async scheduleGatewaySimulation(
+    paymentId: number,
+    gateway: string,
+  ): Promise<void> {
+    switch (gateway.toLowerCase()) {
+      case config.paymentGateway.PAYPAL:
+        await this.paypalGateway.schedulePaymentSimulation(paymentId);
+        break;
+      case config.paymentGateway.RAZORPAY:
       default:
-        throw new Error(`Unsupported payment provider ${provider}`);
-    }
-  }
-
-  private async captureWithRetries(
-    provider: PaymentProvider,
-    transactionId: string,
-    amount: number,
-    currency: string,
-    maxAttempts = 3,
-    initialDelayMs = 200,
-  ): Promise<PaymentGatewayResponse> {
-    let attempt = 0;
-    let delay = initialDelayMs;
-    let lastResponse: PaymentGatewayResponse | undefined;
-
-    while (attempt < maxAttempts) {
-      lastResponse = this.dispatchCapture(provider, {
-        transactionId,
-        amount,
-        currency,
-      });
-
-      if (lastResponse.status === 'success') {
-        return lastResponse;
-      }
-
-      attempt += 1;
-      if (attempt < maxAttempts) {
-        await wait(delay);
-        delay *= 2;
-      }
-    }
-
-    return lastResponse!;
-  }
-
-  private dispatchCapture(
-    provider: PaymentProvider,
-    payload: { transactionId: string; amount: number; currency: string },
-  ): PaymentGatewayResponse {
-    switch (provider) {
-      case 'razorpay':
-        return this.razorpayService.capturePayment(payload);
-      case 'paypal':
-        return this.paypalService.capturePayment(payload);
-      default:
-        throw new Error(`Unsupported payment provider ${provider}`);
+        await this.razorpayGateway.schedulePaymentSimulation(paymentId);
     }
   }
 }

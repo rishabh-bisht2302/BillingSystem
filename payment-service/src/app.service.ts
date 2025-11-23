@@ -12,4 +12,5 @@ export class AppService {
   getProjectDescription(): IProjectInfo {
     return config.projectInfo;
   }
+  
 }

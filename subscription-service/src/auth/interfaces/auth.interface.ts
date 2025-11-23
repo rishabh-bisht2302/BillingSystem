@@ -1,12 +1,13 @@
 export interface GenerateTokenDto {
   name: string;
-  userId: string;
+  userId: number;
   email: string;
   mobile: string;
-  roles?: string[];
+  userType: string;
 }
 
 export interface TokenResponse {
+  isProfileComplete?: boolean;
   accessToken: string;
   expiresIn: number;
 }

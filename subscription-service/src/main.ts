@@ -1,14 +1,39 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
+import { webcrypto } from 'crypto';
+
+// Polyfill crypto for Node 18 compatibility with @nestjs/schedule
+if (typeof globalThis.crypto === 'undefined') {
+  (globalThis as any).crypto = webcrypto;
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('Subscription Service API')
     .setDescription('REST API for managing subscriptions, plans, and users')
     .setVersion(process.env.npm_package_version ?? '1.0.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Include your JWT access token: `Bearer <token>`',
+      },
+      'access-token',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {

@@ -10,11 +10,11 @@ export class AuthService {
     const expiresIn = 60 * 60; // 1 hour in seconds
     const accessToken = this.jwtService.sign(
       {
-        name: "Admin",
-        userId: 1,
-        mobile: "971523702919",
-        email:"Rishabh.bisht2302@gmail.com",
-        roles: ["admin"],
+        name:payload.name,
+        userId: payload.userId,
+        mobile: payload.mobile,
+        email: payload.email,
+        userType: payload.userType,
       },
       { expiresIn },
     );

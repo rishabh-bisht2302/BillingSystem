@@ -12,7 +12,12 @@ services:
     ports:
       - '${SUBSCRIPTION_DB_PORT:-5432}:5432'
     volumes:
-      - subscription_db_data:/var/lib/postgresql/data
+      - ./subscription-service/db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${SUBSCRIPTION_DB_USER} -d ${SUBSCRIPTION_DB_NAME}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   payment-db:
     image: postgres:15-alpine
@@ -26,6 +31,28 @@ services:
       - '${PAYMENT_DB_PORT:-5433}:5432'
     volumes:
       - payment_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${PAYMENT_DB_USER} -d ${PAYMENT_DB_NAME}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: billing-redis
+    command: ['redis-server', '--notify-keyspace-events', 'Ex']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: billing-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - '${RABBITMQ_PORT:-5672}:5672'
+      - '${RABBITMQ_MANAGEMENT_PORT:-15672}:15672'
 
   subscription-service:
     build:
@@ -33,13 +60,18 @@ services:
       target: production
     container_name: subscription-service
     depends_on:
-      - subscription-db
+      subscription-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
     env_file:
       - .env
     environment:
       PORT: ${SUBSCRIPTION_SERVICE_PORT}
-      DATABASE_HOST: ${SUBSCRIPTION_DB_HOST}
-      DATABASE_PORT: ${SUBSCRIPTION_DB_PORT}
+      SUBSCRIPTION_DB_HOST: subscription-db
+      SUBSCRIPTION_DB_PORT: 5432
+      DATABASE_HOST: subscription-db
+      DATABASE_PORT: 5432
       DATABASE_NAME: ${SUBSCRIPTION_DB_NAME}
       DATABASE_USER: ${SUBSCRIPTION_DB_USER}
       DATABASE_PASSWORD: ${SUBSCRIPTION_DB_PASSWORD}
@@ -52,20 +84,25 @@ services:
       target: production
     container_name: payment-service
     depends_on:
-      - payment-db
+      payment-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - .env
     environment:
       PORT: ${PAYMENT_SERVICE_PORT}
-      DATABASE_HOST: ${PAYMENT_DB_HOST}
-      DATABASE_PORT: ${PAYMENT_DB_PORT}
-      DATABASE_NAME: ${PAYMENT_DB_NAME}
-      DATABASE_USER: ${PAYMENT_DB_USER}
-      DATABASE_PASSWORD: ${PAYMENT_DB_PASSWORD}
+      PAYMENT_DB_HOST: payment-db
+      PAYMENT_DB_PORT: 5432
+      PAYMENT_DB_NAME: ${PAYMENT_DB_NAME}
+      PAYMENT_DB_USER: ${PAYMENT_DB_USER}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD}
+      PAYMENT_REDIS_HOST: redis
+      PAYMENT_REDIS_PORT: 6379
+      MESSAGE_QUEUE_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
     ports:
       - '${PAYMENT_SERVICE_PORT:-3002}:${PAYMENT_SERVICE_PORT:-3002}'
 
 volumes:
-  subscription_db_data:
   payment_db_data:
 

@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { IProjectInfo } from './interfaces/project-info.interface';
+import { ApiTags } from '@nestjs/swagger';
 
-
+@ApiTags('Health Check Routes')
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
@@ -12,4 +13,8 @@ export class AppController {
     return this.appService.getProjectDescription();
   }
 
+  @Get('health')
+  getHealth(): string {
+    return 'OK';
+  }
 }

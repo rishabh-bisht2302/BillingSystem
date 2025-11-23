@@ -5,6 +5,8 @@ import {
 import {
   IProjectInfo
 } from './interfaces/project-info.interface';
+
+
 @Injectable()
 export class AppService {
   getProjectDescription(): IProjectInfo {

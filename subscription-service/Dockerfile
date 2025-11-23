@@ -1,4 +1,4 @@
-FROM node:18-alpine AS base
+FROM node:18-bullseye AS base
 WORKDIR /app
 COPY package*.json ./
 
@@ -10,7 +10,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:18-alpine AS production
+FROM node:18-bullseye AS production
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
