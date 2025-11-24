@@ -10,7 +10,7 @@ import { config } from '../config/constants';
 export class WebhookClient {
   private readonly subscriptionServiceBaseUrl =
     config.SUBSCRIPTION_WEBHOOK_URL;
-  private readonly maxAttempts = 5;
+  private readonly maxAttempts = 3;
 
   async send(payload: Record<string, unknown>): Promise<void> {
     for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
@@ -28,7 +28,7 @@ export class WebhookClient {
           console.error(`${customMessages.webhookDeliveryFailed.replace('{attempt}', attempt.toString()).replace('{payload}', JSON.stringify(payload))}`);
           throw error;
         }
-        await wait(2 ** attempt * 200);
+        await wait(500 * attempt);
       }
     }
   }
