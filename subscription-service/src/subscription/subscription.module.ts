@@ -14,12 +14,14 @@ import { PlanService } from '../plan/plan.service';
 import { MandateService } from '../mandate/mandate.service';
 import { UserMandateEntity } from '../mandate/mandate.entity';
 import adminOnlyMiddleware from '../middleware/isAdmin.middleware';
+import { CacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([SubscriptionEntity, PaymentWebhookEventEntity, UserMandateEntity]),
     PlanModule,
     forwardRef(() => PaymentModule),
+    CacheModule,
   ],
   controllers: [SubscriptionController],
   providers: [SubscriptionService, RabbitMqService, PaymentWebhookConsumer, WebhookService, PlanService, MandateService],

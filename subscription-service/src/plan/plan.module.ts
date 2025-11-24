@@ -7,9 +7,10 @@ import authMiddleware from '../middleware/auth.middleware';
 import adminOnlyMiddleware from '../middleware/isAdmin.middleware';
 import { forwardRef } from '@nestjs/common';
 import { SubscriptionModule } from '../subscription/subscription.module';
+import { CacheModule } from '../cache/cache.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([PlanEntity]), forwardRef(() => SubscriptionModule)],
+  imports: [TypeOrmModule.forFeature([PlanEntity]), forwardRef(() => SubscriptionModule), CacheModule],
   controllers: [PlanController],
   providers: [PlanService],
   exports: [PlanService, TypeOrmModule],

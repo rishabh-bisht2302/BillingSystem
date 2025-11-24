@@ -12,12 +12,13 @@ import authMiddleware from '../middleware/auth.middleware';
 import adminOnlyMiddleware from '../middleware/isAdmin.middleware';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { AuthModule } from '../auth/auth.module';
+import { CacheModule } from '../cache/cache.module';
 
 @Module({
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService],
-  imports: [TypeOrmModule.forFeature([UserEntity]), SubscriptionModule, AuthModule],
+  imports: [TypeOrmModule.forFeature([UserEntity]), SubscriptionModule, AuthModule, CacheModule],
 })
 export class UserModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

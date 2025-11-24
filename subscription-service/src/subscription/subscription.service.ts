@@ -26,6 +26,7 @@ import { PlanService } from '../plan/plan.service';
 import { IMandatePayload } from '../mandate/interfaces/mandate.interface';
 import { MandateService } from '../mandate/mandate.service';
 import { UpgradeActionType } from 'src/plan/interfaces/plan.interface';
+import { CacheService } from '../cache/cache.service';
 
 
 @Injectable()
@@ -40,6 +41,7 @@ export class SubscriptionService {
     private readonly rabbitMqService: RabbitMqService,
     private readonly planService: PlanService,
     private readonly mandateService: MandateService,
+    private readonly cacheService: CacheService,
   ) {}
 
   async findAll(filters?: {
@@ -255,6 +257,10 @@ export class SubscriptionService {
     if (revokeOldSubscription) {
       await this.subscriptionRepository.update({ id: Not(subscriptionId), userId: subscription.userId }, { isActive: false, subscriptionStatus: config.subscriptionStatus.INACTIVE as SubscriptionStatus });
     }
+    
+    // Invalidate subscription and user profile cache
+    await this.cacheService.invalidateUserSubscriptions(subscription.userId);
+    await this.cacheService.invalidateUserProfile(subscription.userId);
   }
 
   async handleSubscriptionAction(

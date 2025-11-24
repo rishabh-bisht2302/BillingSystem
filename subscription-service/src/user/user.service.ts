@@ -7,6 +7,7 @@ import { UserProfileResponse, UpdateProfileResponse } from './interfaces/user.in
 import { CreateUserDto } from './dto/create.user.dto';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { AuthService } from '../auth/auth.service';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable()
 export class UserService {
@@ -16,6 +17,7 @@ export class UserService {
         private readonly userRepository: Repository<UserEntity>,
         private readonly subscriptionService: SubscriptionService,
         private readonly authService: AuthService,
+        private readonly cacheService: CacheService,
     ) {}
 
   async findAll(
@@ -27,7 +29,10 @@ export class UserService {
   }
 
   async createUser(user: CreateUserDto): Promise<UserEntity> { 
-    return this.userRepository.save(user);
+    const newUser = await this.userRepository.save(user);
+    // Invalidate users list cache
+    await this.cacheService.invalidateAllUsers();
+    return newUser;
   }
 
   async updateProfile(
@@ -51,6 +56,11 @@ export class UserService {
 
     Object.assign(user, profileData);
     let updateResponse = await this.userRepository.save(user);
+    
+    // Invalidate user profile cache
+    await this.cacheService.invalidateUserProfile(userId);
+    await this.cacheService.invalidateAllUsers();
+    
     const tokenResponse = this.authService.generateToken({
         name: updateResponse.name ?? '',
         userId: updateResponse.id,
@@ -70,21 +80,45 @@ export class UserService {
       throw new NotFoundException(`User ${userId} not found`);
     }
     user.isActive = false;
-    return this.userRepository.save(user);
+    const result = await this.userRepository.save(user);
+    
+    // Invalidate user cache
+    await this.cacheService.invalidateUserProfile(userId);
+    await this.cacheService.invalidateAllUsers();
+    
+    return result;
   }
 
   async updateUser(userId: number, user: UserEntity): Promise<UpdateResult> {
-    return this.userRepository.update(userId, { ...user });
+    const result = await this.userRepository.update(userId, { ...user });
+    
+    // Invalidate user cache
+    await this.cacheService.invalidateUserProfile(userId);
+    await this.cacheService.invalidateAllUsers();
+    
+    return result;
   }
 
   async deleteUser(userId: number): Promise<UpdateResult> {
-    return this.userRepository.update(userId, { isActive: false });
+    const result = await this.userRepository.update(userId, { isActive: false });
+    
+    // Invalidate user cache
+    await this.cacheService.invalidateUserProfile(userId);
+    await this.cacheService.invalidateAllUsers();
+    
+    return result;
   }
 
   async getProfileWithActiveSubscription(userId: number): Promise<UserProfileResponse> {
     const normalizedId = Number(userId);
     if (Number.isNaN(normalizedId)) {
       throw new BadRequestException('Invalid user id');
+    }
+
+    // Try to get from cache first
+    const cachedProfile = await this.cacheService.getUserProfile(normalizedId);
+    if (cachedProfile) {
+      return cachedProfile;
     }
 
     const user = await this.userRepository.findOne({ where: { id: normalizedId } });
@@ -97,7 +131,7 @@ export class UserService {
         normalizedId,
       );
 
-    return {
+    const profileResponse: UserProfileResponse = {
       user: {
         id: user.id,
         name: user.name,
@@ -131,6 +165,11 @@ export class UserService {
           }
         : null,
     };
+
+    // Cache the profile
+    await this.cacheService.setUserProfile(normalizedId, profileResponse);
+
+    return profileResponse;
   }
 }
 

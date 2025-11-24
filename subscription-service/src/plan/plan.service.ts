@@ -10,6 +10,7 @@ import {
 import { UpgradeActionType, UpgradeQuote } from './interfaces/plan.interface';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { config } from '../config/constants';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable()
 export class PlanService {
@@ -18,10 +19,19 @@ export class PlanService {
     private readonly planRepository: Repository<PlanEntity>,
     @Inject(forwardRef(() => SubscriptionService))
     private readonly subscriptionService: SubscriptionService,
+    private readonly cacheService: CacheService,
   ) {}
 
   async findAll(filters: PlanFilters = {}): Promise<PlanEntity[]> {
     const { id, planName, isActive, isNew, isPromotional, limit, offset } = filters;
+    
+    // Create cache key based on filters
+    const cacheKey = JSON.stringify({ id, planName, isActive, isNew, isPromotional, limit, offset });
+    const cachedPlans = await this.cacheService.getPlans(cacheKey);
+    if (cachedPlans) {
+      return cachedPlans;
+    }
+
     const where: FindOptionsWhere<PlanEntity> = {};
 
     if (typeof id === 'number') {
@@ -56,18 +66,37 @@ export class PlanService {
       paginationOptions.skip = parsedOffset;
     }
 
-    return this.planRepository.find({
+    const plans = await this.planRepository.find({
       where,
       order: { createdAt: 'DESC' },
       ...paginationOptions,
     });
+
+    // Cache the result
+    await this.cacheService.setPlans(cacheKey, plans);
+
+    return plans;
   }
 
   async findById(id: number): Promise<PlanEntity | null> {
     if (Number.isNaN(id)) {
       return Promise.resolve(null);
     }
-    return this.planRepository.findOne({ where: { id } });
+    
+    // Try cache first
+    const cachedPlan = await this.cacheService.getPlanDetail(id);
+    if (cachedPlan) {
+      return cachedPlan;
+    }
+
+    const plan = await this.planRepository.findOne({ where: { id } });
+    
+    // Cache the result
+    if (plan) {
+      await this.cacheService.setPlanDetail(id, plan);
+    }
+    
+    return plan;
   }
 
   async getPlanLabel(id: number): Promise<string> {
@@ -83,7 +112,12 @@ export class PlanService {
 
   async create(plan: Partial<PlanEntity>): Promise<PlanEntity> {
     const entity = this.planRepository.create(plan);
-    return this.planRepository.save(entity);
+    const savedPlan = await this.planRepository.save(entity);
+    
+    // Invalidate all plans cache
+    await this.cacheService.invalidateAllPlans();
+    
+    return savedPlan;
   }
 
   async update(id: number, plan: Partial<PlanEntity>): Promise<PlanEntity> {
@@ -91,7 +125,12 @@ export class PlanService {
     if (!existing) {
       throw new NotFoundException(`Plan ${id} not found`);
     }
-    return this.planRepository.save(existing);
+    const updatedPlan = await this.planRepository.save(existing);
+    
+    // Invalidate plan cache
+    await this.cacheService.invalidatePlan(id);
+    
+    return updatedPlan;
   }
 
   async delete(id: number): Promise<PlanEntity> {
@@ -101,7 +140,12 @@ export class PlanService {
     }
     plan.isActive = false;
     plan.deletedAt = new Date();
-    return this.planRepository.save(plan);
+    const result = await this.planRepository.save(plan);
+    
+    // Invalidate plan cache
+    await this.cacheService.invalidatePlan(id);
+    
+    return result;
   }
 
   private toPlanSummary(plan?: PlanEntity | null): PlanSummaryResponse | null {

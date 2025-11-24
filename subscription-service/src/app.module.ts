@@ -16,11 +16,13 @@ import { WebhookService } from './webhook/webhook.service';
 import { MandateService } from './mandate/mandate.service';
 import { UserMandateEntity } from './mandate/mandate.entity';
 import { RabbitMqService } from './message-queue/rabbitmq.service';
+import { CacheModule } from './cache/cache.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    CacheModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: config.SUBSCRIPTION_DB_HOST,

@@ -64,6 +64,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_started
+      redis:
+        condition: service_started
     env_file:
       - .env
     environment:
@@ -75,6 +77,8 @@ services:
       DATABASE_NAME: ${SUBSCRIPTION_DB_NAME}
       DATABASE_USER: ${SUBSCRIPTION_DB_USER}
       DATABASE_PASSWORD: ${SUBSCRIPTION_DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - '${SUBSCRIPTION_SERVICE_PORT:-3001}:${SUBSCRIPTION_SERVICE_PORT:-3001}'
 
