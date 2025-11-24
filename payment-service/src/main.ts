@@ -1,10 +1,31 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationPipe, BadRequestException } from '@nestjs/common';
+import { INestApplication, ValidationPipe, BadRequestException } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const registerGracefulShutdown = (application: INestApplication) => {
+    const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
+    const shutdown = async (signal: NodeJS.Signals) => {
+      try {
+        console.log(`Payment service received ${signal}. Closing gracefully...`);
+        await application.close();
+        console.log('Payment service closed gracefully.');
+        process.exit(0);
+      } catch (error) {
+        console.error('Error during payment service shutdown:', error);
+        process.exit(1);
+      }
+    };
+
+    signals.forEach((signal) => {
+      process.once(signal, () => {
+        void shutdown(signal);
+      });
+    });
+  };
 
   // Global validation pipe with custom error formatting
   app.useGlobalPipes(
@@ -56,5 +77,7 @@ async function bootstrap() {
       } (docs available at /docs)`,
     );
   });
+
+  registerGracefulShutdown(app);
 }
 bootstrap();

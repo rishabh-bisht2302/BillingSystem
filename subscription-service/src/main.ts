@@ -1,13 +1,34 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { webcrypto } from 'crypto';
 
 // Polyfill crypto for Node 18 compatibility with @nestjs/schedule
 if (typeof globalThis.crypto === 'undefined') {
   (globalThis as any).crypto = webcrypto;
 }
+
+const registerGracefulShutdown = (app: INestApplication) => {
+  const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
+  const shutdown = async (signal: NodeJS.Signals) => {
+    try {
+      console.log(`Subscription service received ${signal}. Closing gracefully...`);
+      await app.close();
+      console.log('Subscription service closed gracefully.');
+      process.exit(0);
+    } catch (error) {
+      console.error('Error during subscription service shutdown:', error);
+      process.exit(1);
+    }
+  };
+
+  signals.forEach((signal) => {
+    process.once(signal, () => {
+      void shutdown(signal);
+    });
+  });
+};
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -55,5 +76,7 @@ async function bootstrap() {
       } (docs available at /docs)`,
     );
   });
+
+  registerGracefulShutdown(app);
 }
 bootstrap();
