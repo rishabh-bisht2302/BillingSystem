@@ -18,7 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test-only:e2e": "sh -c \"export $(grep -v '^#' .env.test | xargs) && export NODE_ENV=test && npm run build && docker-compose up -d payment-db redis && jest --config ./test/jest-e2e.json --detectOpenHandles\""
+    "test-only:e2e": "sh -c \"export $(grep -v '^#' .env.test | xargs) && export NODE_ENV=test && npm run build && docker-compose up -d payment-db redis && jest --config ./test/jest-e2e.json --detectOpenHandles --testTimeout=5000; docker-compose down\""
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
