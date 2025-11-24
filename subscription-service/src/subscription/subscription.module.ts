@@ -13,6 +13,7 @@ import { WebhookService } from '../webhook/webhook.service';
 import { PlanService } from '../plan/plan.service';
 import { MandateService } from '../mandate/mandate.service';
 import { UserMandateEntity } from '../mandate/mandate.entity';
+import adminOnlyMiddleware from '../middleware/isAdmin.middleware';
 
 @Module({
   imports: [
@@ -29,7 +30,11 @@ export class SubscriptionModule implements NestModule {
     consumer
       .apply(authMiddleware)
       .forRoutes(
-        { path: 'subscription/update', method: RequestMethod.PATCH },
+        { path: 'subscription/update', method: RequestMethod.PATCH }
+      );
+    consumer
+      .apply(adminOnlyMiddleware)
+      .forRoutes(
         { path: 'subscription/all', method: RequestMethod.GET },
       );
   }

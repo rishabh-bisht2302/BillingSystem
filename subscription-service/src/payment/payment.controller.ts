@@ -1,5 +1,5 @@
 import { Body, Controller, Post, Req } from '@nestjs/common';
-import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
 import {
   CreateOrderDto,
@@ -8,6 +8,7 @@ import {
 } from './interfaces/payment.interface';
 import { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { swaggerConstants } from '../config/swagger.constants';
 
 @ApiBearerAuth('access-token')
 @Controller('payment')
@@ -16,7 +17,15 @@ export class PaymentController {
 
   @ApiTags('User Routes - These routes are accessible to users from the application')
   @Post('initiate')
+  @ApiOperation({
+    summary: swaggerConstants.initiatePaymentSummary,
+    description: swaggerConstants.initiatePaymentDescription,
+  })
   @ApiBody({ type: CreateOrderDto })
+  @ApiResponse({
+    status: 201,
+    description: swaggerConstants.initiatePaymentResponseDescription,
+  })
   async InitiateSubscriptionPayment(
     @Req() req: AuthenticatedRequest,
     @Body() payload: CreateOrderDto,
@@ -26,6 +35,14 @@ export class PaymentController {
 
   @ApiTags('User Routes - These routes are accessible to users from the application')
   @Post('webhook')
+  @ApiOperation({
+    summary: swaggerConstants.paymentWebhookSummary,
+    description: swaggerConstants.paymentWebhookDescription,
+  })
+  @ApiResponse({
+    status: 201,
+    description: swaggerConstants.paymentWebhookResponseDescription,
+  })
   async handlePaymentWebhook(
     @Body() payload: PaymentWebhookPayload,
   ): Promise<void> {

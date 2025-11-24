@@ -14,8 +14,9 @@ import {
   SubscriberActionDto,
 } from './interfaces/subscription.interface';
 import { GetSubscriptionsQueryDto } from './dto/get-subscriptions-query.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
+import { swaggerConstants } from '../config/swagger.constants';
 
 @ApiBearerAuth('access-token')
 @Controller('subscription')
@@ -28,8 +29,16 @@ export class SubscriptionController {
     return undefined;
   };
 
-  @ApiTags('User Routes - These routes are accessible to users from the application')
+  @ApiTags('Admin Only routes - These routes are only accessible to admin users for management tools')
   @Get('all')
+  @ApiOperation({
+    summary: swaggerConstants.getAllSubscriptionsSummary,
+    description: swaggerConstants.getAllSubscriptionsDescription,
+  })
+  @ApiResponse({
+    status: 200,
+    description: swaggerConstants.getAllSubscriptionsResponseDescription,
+  })
   async findAll(
     @Query() query: GetSubscriptionsQueryDto,
   ): Promise<SubscriptionEntity[]> {
@@ -43,6 +52,15 @@ export class SubscriptionController {
 
   @ApiTags('User Routes - These routes are accessible to users from the application')
   @Patch('update')
+  @ApiOperation({
+    summary: swaggerConstants.updateSubscriptionSummary,
+    description: swaggerConstants.updateSubscriptionDescription,
+  })
+  @ApiBody({ type: SubscriberActionDto })
+  @ApiResponse({
+    status: 200,
+    description: swaggerConstants.updateSubscriptionResponseDescription,
+  })
   async manageSubscription(
     @Req() req: AuthenticatedRequest,
     @Body() actionDto: SubscriberActionDto,

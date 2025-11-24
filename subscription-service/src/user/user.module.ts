@@ -21,10 +21,16 @@ import { AuthModule } from '../auth/auth.module';
 })
 export class UserModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(authMiddleware).forRoutes(UserController);
+    consumer.apply(authMiddleware).forRoutes(
+      { path: 'users/profile', method: RequestMethod.GET },
+      { path: 'users/profile', method: RequestMethod.PATCH },
+      { path: 'users/deactivate', method: RequestMethod.PATCH }
+    );
+    
     consumer
-      .apply(adminOnlyMiddleware)
+      .apply(authMiddleware, adminOnlyMiddleware)
       .forRoutes(
+        { path: 'users', method: RequestMethod.GET },
         { path: 'users', method: RequestMethod.POST },
         { path: 'users/:id', method: RequestMethod.PUT },
         { path: 'users/:id', method: RequestMethod.DELETE },

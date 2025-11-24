@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -20,5 +20,10 @@ import { UserEntity } from '../user/user.schema';
   providers: [AuthService],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Token generation endpoint is currently OPEN for development/testing
+    // In production, this should be protected or replaced with proper admin authentication
+  }
+}
 

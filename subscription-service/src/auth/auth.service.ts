@@ -7,7 +7,7 @@ export class AuthService {
   constructor(private readonly jwtService: JwtService) {}
 
   generateToken(payload: GenerateTokenDto): TokenResponse {
-    const expiresIn = 60 * 60; // 1 hour in seconds
+    const expiresIn = 2 * 60 * 60; // 2 hours in seconds
     const accessToken = this.jwtService.sign(
       {
         name:payload.name,

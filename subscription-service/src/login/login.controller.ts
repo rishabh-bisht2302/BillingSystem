@@ -3,7 +3,8 @@ import { LoginService } from './login.service';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { TokenResponse } from '../auth/interfaces/auth.interface';
 import { UserEntity } from '../user/user.schema';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { swaggerConstants } from '../config/swagger.constants';
 
 @Controller('login')
 export class LoginController {
@@ -11,6 +12,15 @@ export class LoginController {
   
   @ApiTags('User Routes - These routes are accessible to users from the application')
   @Post()
+  @ApiOperation({
+    summary: swaggerConstants.loginSummary,
+    description: swaggerConstants.loginDescription,
+  })
+  @ApiBody({ type: LoginRequestDto })
+  @ApiResponse({
+    status: 201,
+    description: swaggerConstants.loginResponseDescription,
+  })
   async login(
     @Body() payload: LoginRequestDto,
   ): Promise<{ user: UserEntity; token: TokenResponse }> {

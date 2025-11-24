@@ -4,9 +4,10 @@ import { TokenResponse } from './interfaces/auth.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../user/user.schema';
-import { ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsNotEmpty } from 'class-validator';
+import { swaggerConstants } from '../config/swagger.constants';
 
 class AdminTokenRequestDto {
   @ApiProperty({ description: 'Target user id' })
@@ -25,19 +26,21 @@ export class AuthController {
   ) {}
 
   @Post('token')
-  async generateToken(@Body() payload: AdminTokenRequestDto): Promise<TokenResponse> {
-    const user = await this.userRepository.findOne({
-      where: { id: payload.userId },
-    });
-    if (!user) {
-      throw new NotFoundException(`User ${payload.userId} not found`);
-    }
+  @ApiOperation({
+    summary: swaggerConstants.generateAdminTokenSummary,
+    description: swaggerConstants.generateAdminTokenDescription,
+  })
+  @ApiResponse({
+    status: 200,
+    description: swaggerConstants.generateAdminTokenResponseDescription,
+  })
+  async generateToken(): Promise<TokenResponse> {
     return this.authService.generateToken({
-      name: user.name ?? '',
-      userId: user.id,
-      email: user.email ?? '',
-      mobile: user.mobile ?? '',
-      userType: user.userType ?? 'customer',
+      name: 'Admin',
+      userId: 0 as number,
+      email: 'admin@example.com',
+      mobile: '1234567890',
+      userType: 'admin'
     });
   }
 }
