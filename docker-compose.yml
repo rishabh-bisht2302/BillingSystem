@@ -92,6 +92,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      payment-service-tests:
+        condition: service_completed_successfully
     env_file:
       - .env
     environment:
@@ -106,6 +108,32 @@ services:
       MESSAGE_QUEUE_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
     ports:
       - '${PAYMENT_SERVICE_PORT:-3002}:${PAYMENT_SERVICE_PORT:-3002}'
+
+  payment-service-tests:
+    build:
+      context: ./payment-service
+      target: build
+    container_name: payment-service-tests
+    depends_on:
+      payment-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: test
+      PAYMENT_DB_HOST: payment-db
+      PAYMENT_DB_PORT: 5432
+      PAYMENT_DB_NAME: ${PAYMENT_DB_NAME}
+      PAYMENT_DB_USER: ${PAYMENT_DB_USER}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD}
+      PAYMENT_REDIS_HOST: redis
+      PAYMENT_REDIS_PORT: 6379
+      MESSAGE_QUEUE_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
+    command: >
+      sh -c "npm run test -- --passWithNoTests && npm run test:e2e"
+    restart: "no"
 
 volumes:
   payment_db_data:

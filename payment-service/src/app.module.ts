@@ -18,6 +18,7 @@ import { config } from './config/constants';
       database: config.PAYMENT_DB_NAME, 
       autoLoadEntities: true,
       synchronize: true,
+      dropSchema: process.env.NODE_ENV === 'test',
     }),
     PaymentModule,
     RefundModule,
