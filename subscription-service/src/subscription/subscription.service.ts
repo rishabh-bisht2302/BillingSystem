@@ -281,6 +281,7 @@ export class SubscriptionService {
           reason: actionDto.reason ?? null,
           paymentProvider: actionDto.paymentProvider ?? 'razorpay',
           userEmail: subscription.user.email,
+          userId: subscription.user.id
         });
         break;
       case config.subscriptionAction.UPDATE_PLAN:
@@ -306,6 +307,10 @@ export class SubscriptionService {
         downgradeSubscriptionId: null
       };
       this.subscriptionRepository.update(dto.subscriptionId, pausePayload);
+      await this.cacheService.invalidateUserSubscriptions(dto.userId);
+      await this.cacheService.invalidateUserProfile(dto.userId);
+
+      await this.mandateService.revokeMandate(dto.userId);
       sendEmailToUser(dto.userEmail ?? '', config.subscriptionAction.CANCEL);
     } catch (error) {
       console.error(

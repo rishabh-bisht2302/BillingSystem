@@ -4,7 +4,7 @@ import { SubscriptionEntity } from '../subscription/subscription.schema';
 import { WebhookService } from '../webhook/webhook.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { MandateService } from '../mandate/mandate.service';
-import { config } from 'src/config/constants';
+import { config } from '../config/constants';
 
 const DAILY_RENEWAL_CRON =
   process.env.SUBSCRIPTION_RENEWAL_CRON_EXPRESSION ?? CronExpression.EVERY_10_SECONDS;

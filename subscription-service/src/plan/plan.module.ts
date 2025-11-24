@@ -23,7 +23,7 @@ export class PlanModule implements NestModule {
       { path: 'plans/quote', method: RequestMethod.GET },
     );
     consumer
-      .apply(adminOnlyMiddleware)
+      .apply(authMiddleware,adminOnlyMiddleware)
       .forRoutes(
         { path: 'plans', method: RequestMethod.POST },
         { path: 'plans', method: RequestMethod.GET },

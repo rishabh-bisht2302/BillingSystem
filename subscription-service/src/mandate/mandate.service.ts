@@ -23,4 +23,8 @@ export class MandateService {
             order: { createdAt: 'DESC' },
         });
     }
+
+    async revokeMandate(userId: number): Promise<void> {
+        await this.mandateRepository.delete({ userId });
+    }
 }

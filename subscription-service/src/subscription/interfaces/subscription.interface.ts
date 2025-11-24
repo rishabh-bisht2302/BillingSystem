@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsOptional, IsPositive } from "class-validator";
-import { config } from "src/config/constants";
+import { config } from "../../config/constants";
 import { IsString } from "class-validator";
 import { IsNumber } from "class-validator";
 export type SubscriptionStatus = 'active' | 'inactive' | 'paused' | 'canceled';
@@ -18,6 +18,7 @@ export interface ManageSubscriptionDto {
   reason?: string | null;
   paymentProvider: PaymentProvider;
   userEmail?: string;
+  userId: number;
 }
 
 export interface UpgradeSubscriptionDto {

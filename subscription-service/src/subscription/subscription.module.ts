@@ -35,7 +35,7 @@ export class SubscriptionModule implements NestModule {
         { path: 'subscription/update', method: RequestMethod.PATCH }
       );
     consumer
-      .apply(adminOnlyMiddleware)
+      .apply(authMiddleware, adminOnlyMiddleware)
       .forRoutes(
         { path: 'subscription/all', method: RequestMethod.GET },
       );

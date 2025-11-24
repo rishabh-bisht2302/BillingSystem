@@ -66,6 +66,8 @@ services:
         condition: service_started
       redis:
         condition: service_started
+      subscription-service-tests:
+        condition: service_completed_successfully
     env_file:
       - .env
     environment:
@@ -81,6 +83,36 @@ services:
       REDIS_PORT: 6379
     ports:
       - '${SUBSCRIPTION_SERVICE_PORT:-3001}:${SUBSCRIPTION_SERVICE_PORT:-3001}'
+
+  subscription-service-tests:
+    build:
+      context: ./subscription-service
+      target: build
+    container_name: subscription-service-tests
+    depends_on:
+      subscription-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: test
+      SUBSCRIPTION_DB_HOST: subscription-db
+      SUBSCRIPTION_DB_PORT: 5432
+      DATABASE_HOST: subscription-db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${SUBSCRIPTION_DB_NAME}
+      DATABASE_USER: ${SUBSCRIPTION_DB_USER}
+      DATABASE_PASSWORD: ${SUBSCRIPTION_DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MESSAGE_QUEUE_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
+    command: >
+      sh -c "npm run test -- --passWithNoTests && npm run test:e2e"
+    restart: "no"
 
   payment-service:
     build:
