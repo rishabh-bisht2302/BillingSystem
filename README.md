@@ -68,6 +68,16 @@ BillingSystem/
 └── README.md
 ```
 
+## Git Hooks
+
+A tracked pre-commit hook lives in `.githooks/pre-commit`. It runs the full E2E suites for both services (`npm run test-only:e2e` inside `subscription-service/` and `payment-service/`) before every commit so broken builds never land.
+
+Enable it once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Next Steps
 
 - Initialize separate git repositories per service (run `git init` inside each folder or promote them to their own remote repos).
