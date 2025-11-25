@@ -38,5 +38,25 @@ export const config = {
   paymentGateway: {
     PAYPAL: 'paypal',
     RAZORPAY: 'razorpay',
+  },
+  userTypes: {
+    CUSTOMER: 'customer',
+  },
+};
+
+export const TEST_CONSTANTS = {
+  ENVIRONMENT_TEST: 'test',
+  PAYMENT_ORDER_ID: 'test-order-id',
+  PAYMENT_ID: 1
+};
+
+
+export const TIME_CONSTANTS = {
+  MILLISECONDS_IN_DAY: 24 * 60 * 60 * 1000,
+  END_OF_DAY: {
+    HOURS: 23,
+    MINUTES: 59,
+    SECONDS: 59,
+    MILLISECONDS: 999,
   }
-}
+};

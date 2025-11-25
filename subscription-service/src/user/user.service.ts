@@ -8,6 +8,7 @@ import { CreateUserDto } from './dto/create.user.dto';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { AuthService } from '../auth/auth.service';
 import { CacheService } from '../cache/cache.service';
+import { ERROR_MESSAGES } from '../config/custom.messages';
 
 @Injectable()
 export class UserService {
@@ -41,7 +42,7 @@ export class UserService {
   ): Promise<UpdateProfileResponse> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
-      throw new NotFoundException(`User ${userId} not found`);
+      throw new NotFoundException(ERROR_MESSAGES.USER_NOT_FOUND(userId));
     }
 
     const { email, mobile, ...profileData } = payload;
@@ -77,7 +78,7 @@ export class UserService {
   async deactivateUser(userId: number): Promise<UserEntity> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
-      throw new NotFoundException(`User ${userId} not found`);
+      throw new NotFoundException(ERROR_MESSAGES.USER_NOT_FOUND(userId));
     }
     user.isActive = false;
     const result = await this.userRepository.save(user);
@@ -112,7 +113,7 @@ export class UserService {
   async getProfileWithActiveSubscription(userId: number): Promise<UserProfileResponse> {
     const normalizedId = Number(userId);
     if (Number.isNaN(normalizedId)) {
-      throw new BadRequestException('Invalid user id');
+      throw new BadRequestException(ERROR_MESSAGES.INVALID_USER_ID);
     }
 
     // Try to get from cache first
@@ -123,7 +124,7 @@ export class UserService {
 
     const user = await this.userRepository.findOne({ where: { id: normalizedId } });
     if (!user) {
-      throw new NotFoundException(`User ${normalizedId} not found`);
+      throw new NotFoundException(ERROR_MESSAGES.USER_NOT_FOUND(normalizedId));
     }
 
     const activeSubscription =

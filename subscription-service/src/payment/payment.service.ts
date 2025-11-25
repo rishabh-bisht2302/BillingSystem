@@ -11,6 +11,8 @@ import { SubscriptionService } from '../subscription/subscription.service';
 import { WebhookService } from '../webhook/webhook.service';
 import { PlanService } from '../plan/plan.service';
 import { config } from '../config/constants';
+import { ERROR_MESSAGES } from '../config/custom.messages';
+import { TEST_CONSTANTS, TIME_CONSTANTS } from '../config/constants';
 @Injectable()
 export class PaymentService {
   constructor(
@@ -24,16 +26,16 @@ export class PaymentService {
     payload: CreateOrderDto,
   ): Promise<OrderSummary> {
     try {
-        if (process.env.NODE_ENV === 'test') {
+        if (process.env.NODE_ENV === TEST_CONSTANTS.ENVIRONMENT_TEST) {
           return {
-            orderId: 'test-order-id',
-            paymentId: 1,
+            orderId: TEST_CONSTANTS.PAYMENT_ORDER_ID,
+            paymentId: TEST_CONSTANTS.PAYMENT_ID,
           };
         };
         const checkActiveSubscription = await this.subscriptionService.findActiveSubscriptionByUser(userId);
         if (checkActiveSubscription) {
           throw new BadRequestException(
-            'You already have an active subscription. Please try switching to a different plan.',
+            ERROR_MESSAGES.ACTIVE_SUBSCRIPTION_EXISTS,
           );
         }
         const subscriptionId = await this.resolveSubscriptionId(userId, payload);
@@ -44,7 +46,7 @@ export class PaymentService {
         error instanceof Error ? error.stack : String(error),
       );
       throw new BadRequestException(
-        'Unable to initiate payment at the moment. Please try again later.',
+        ERROR_MESSAGES.PAYMENT_TEMPORARILY_UNAVAILABLE,
       );
     }
   }
@@ -61,7 +63,11 @@ export class PaymentService {
     const subscription =
       await this.subscriptionService.createPendingSubscription({
         userId,
-        expiresOn: new Date(new Date().getTime() + (plan?.validityInDays ?? config.minimumValidityInDays) * 24 * 60 * 60 * 1000),
+        expiresOn: new Date(
+          Date.now() +
+            (plan?.validityInDays ?? config.minimumValidityInDays) *
+              TIME_CONSTANTS.MILLISECONDS_IN_DAY,
+        ),
         ...payload
     });
     

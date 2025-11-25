@@ -6,6 +6,8 @@ import { LoginRequestDto } from './dto/login-request.dto';
 import { hashPassword, verifyPassword } from '../utils/password.util';
 import { AuthService } from '../auth/auth.service';
 import { TokenResponse } from '../auth/interfaces/auth.interface';
+import { config } from '../config/constants';
+import { ERROR_MESSAGES } from '../config/custom.messages';
 
 @Injectable()
 export class LoginService {
@@ -19,7 +21,7 @@ export class LoginService {
     dto: LoginRequestDto,
   ): Promise<{ user: UserEntity; isProfileComplete:boolean; token: TokenResponse }> {
     if (!dto.email && !dto.mobile) {
-      throw new BadRequestException('Either email or mobile is required');
+      throw new BadRequestException(ERROR_MESSAGES.EMAIL_OR_MOBILE_REQUIRED);
     }
     const where: Partial<UserEntity> = {};
     if (dto.email) {
@@ -34,7 +36,7 @@ export class LoginService {
 
     if (!user) {
       user = this.userRepository.create({
-        userType: 'customer',
+        userType: config.userTypes.CUSTOMER,
         email: dto.email,
         mobile: dto.mobile,
         passwordHash,
@@ -51,7 +53,7 @@ export class LoginService {
       : false;
 
     if (!isValid) {
-      throw new BadRequestException('Invalid credentials');
+      throw new BadRequestException(ERROR_MESSAGES.INVALID_CREDENTIALS);
     }
 
     const token = this.authService.generateToken({

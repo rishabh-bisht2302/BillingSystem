@@ -17,6 +17,7 @@ import { RabbitMqService } from '../message-queue/rabbitmq.service';
 import { generateReceipt } from '../utils/receipt.util';
 import { sendEmailToUser } from '../utils/email.util';
 import { config } from '../config/constants';
+import { TIME_CONSTANTS } from '../config/constants';
 import { SubscriptionStatus } from './interfaces/subscription.interface';
 import { customMessages } from '../config/custom.messages';
 import { WebhookService } from '../webhook/webhook.service';
@@ -25,8 +26,8 @@ import { Not } from 'typeorm';
 import { PlanService } from '../plan/plan.service';
 import { IMandatePayload } from '../mandate/interfaces/mandate.interface';
 import { MandateService } from '../mandate/mandate.service';
-import { UpgradeActionType } from 'src/plan/interfaces/plan.interface';
 import { CacheService } from '../cache/cache.service';
+import { ERROR_MESSAGES } from '../config/custom.messages';
 
 
 @Injectable()
@@ -269,30 +270,39 @@ export class SubscriptionService {
   ): Promise<void> { 
     const subscription = await this.findActiveSubscriptionByUser(userId);
     if (!subscription) {
-      throw new NotFoundException(
-        `No active subscription found`,
-      );
+      throw new NotFoundException(ERROR_MESSAGES.NO_ACTIVE_SUBSCRIPTION);
     }
     let subscriptionId = subscription.id;
+    const fallbackProvider = (actionDto.paymentProvider ??
+      config.paymentGateway.RAZORPAY) as PaymentProvider;
     switch (actionDto.action) {
       case config.subscriptionAction.CANCEL:
         this.cancelSubscription({
           subscriptionId,
           reason: actionDto.reason ?? null,
-          paymentProvider: actionDto.paymentProvider ?? 'razorpay',
+          paymentProvider: fallbackProvider,
           userEmail: subscription.user.email,
           userId: subscription.user.id
         });
         break;
       case config.subscriptionAction.UPDATE_PLAN:
-        this.upgradeSubscription(subscription, actionDto.targetPlanId, actionDto.amountDue, actionDto.paymentProvider ?? 'razorpay');
+        this.upgradeSubscription(
+          subscription,
+          actionDto.targetPlanId,
+          actionDto.amountDue,
+          fallbackProvider,
+        );
         break
       case config.subscriptionAction.DOWNGRADE_PLAN:
-        this.downgradeSubscription(subscription, actionDto.targetPlanId, actionDto.paymentProvider ?? 'razorpay');
+        this.downgradeSubscription(
+          subscription,
+          actionDto.targetPlanId,
+          fallbackProvider,
+        );
         break
       default:
         throw new BadRequestException(
-          `Unsupported action ${actionDto.action}`,
+          ERROR_MESSAGES.UNSUPPORTED_ACTION(actionDto.action),
         );
     }
   };
@@ -328,16 +338,18 @@ export class SubscriptionService {
   ): Promise<void> {
     let targetPlan = await this.planService.findById(targetPlanId);
     if (!targetPlan) {
-      throw new NotFoundException(
-        `Target plan not found`,
-      );
+      throw new NotFoundException(ERROR_MESSAGES.TARGET_PLAN_NOT_FOUND);
     }
     const newSubscription = await this.createPendingSubscription({
       userId: subscription.user.id,
       planId: targetPlanId,
       amount: targetPlan.price,
       gateway: paymentProvider,
-      expiresOn: new Date(subscription.expiresOn.getTime() + (targetPlan.validityInDays ?? config.minimumValidityInDays) * 24 * 60 * 60 * 1000)
+      expiresOn: new Date(
+        subscription.expiresOn.getTime() +
+          (targetPlan.validityInDays ?? config.minimumValidityInDays) *
+            TIME_CONSTANTS.MILLISECONDS_IN_DAY,
+      )
     })
     this.webhookService.initiatePayment({
       planId: targetPlanId,
@@ -357,16 +369,18 @@ export class SubscriptionService {
     try {
       let targetPlan = await this.planService.findById(targetPlanId);
       if (!targetPlan) {
-        throw new NotFoundException(
-          `Target plan not found`,
-        );
+        throw new NotFoundException(ERROR_MESSAGES.TARGET_PLAN_NOT_FOUND);
       };
       const newSubscription = await this.createPendingSubscription({
         userId: subscription.user.id,
         planId: targetPlanId,
         amount: targetPlan.price,
         gateway: paymentProvider,
-        expiresOn: new Date(subscription.expiresOn.getTime() + (targetPlan.validityInDays ?? config.minimumValidityInDays) * 24 * 60 * 60 * 1000)
+        expiresOn: new Date(
+          subscription.expiresOn.getTime() +
+            (targetPlan.validityInDays ?? config.minimumValidityInDays) *
+              TIME_CONSTANTS.MILLISECONDS_IN_DAY,
+        )
       })
       await this.subscriptionRepository.update(subscription.id, {
         downgradeSubscriptionId: newSubscription.id,
@@ -381,7 +395,12 @@ export class SubscriptionService {
 
   async findExpiringSubscriptions(): Promise<SubscriptionEntity[]> {
     const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 59, 999);
+      endOfToday.setHours(
+        TIME_CONSTANTS.END_OF_DAY.HOURS,
+        TIME_CONSTANTS.END_OF_DAY.MINUTES,
+        TIME_CONSTANTS.END_OF_DAY.SECONDS,
+        TIME_CONSTANTS.END_OF_DAY.MILLISECONDS,
+      );
 
     return this.subscriptionRepository.find({
       where: {
