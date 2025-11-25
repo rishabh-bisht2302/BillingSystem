@@ -64,7 +64,7 @@ export class LoginService {
       userType: user.userType,
     });
 
-    return { user, isProfileComplete, token };
+    return { user: { ...user, passwordHash: '********' }, isProfileComplete, token };
   }
 }
 
