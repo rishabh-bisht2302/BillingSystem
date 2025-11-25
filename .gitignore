@@ -3,6 +3,5 @@ dist
 .env
 .DS_Store
 *.log
-coverage
 *.tsbuildinfo
 
