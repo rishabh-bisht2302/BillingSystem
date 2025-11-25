@@ -39,6 +39,7 @@ export class PaymentController {
     summary: swaggerConstants.paymentWebhookSummary,
     description: swaggerConstants.paymentWebhookDescription,
   })
+  @ApiBody({ type: PaymentWebhookPayload })
   @ApiResponse({
     status: 201,
     description: swaggerConstants.paymentWebhookResponseDescription,

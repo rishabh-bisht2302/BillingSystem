@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, FindOptionsWhere, LessThanOrEqual, Repository } from 'typeorm';
+import { Between, FindOptionsWhere, In, LessThanOrEqual, Repository } from 'typeorm';
 import { SubscriptionEntity } from './subscription.schema';
 import {
   ManageSubscriptionDto,
@@ -47,6 +47,9 @@ export class SubscriptionService {
 
   async findAll(filters?: {
     isActive?: boolean;
+    isPaused?: boolean;
+    isCanceled?: boolean;
+    isRenewed?: boolean;
     planId?: number;
     userId?: number;
     fromDate?: Date;
@@ -56,6 +59,22 @@ export class SubscriptionService {
 
     if (typeof filters?.isActive === 'boolean') {
       where.isActive = filters.isActive;
+    }
+
+    const subscriptionStatuses: SubscriptionStatus[] = [];
+    if (filters?.isPaused) {
+      subscriptionStatuses.push(config.subscriptionStatus.PAUSED as SubscriptionStatus);
+    }
+    if (filters?.isCanceled) {
+      subscriptionStatuses.push(config.subscriptionStatus.CANCELED as SubscriptionStatus);
+    }
+    if (filters?.isRenewed) {
+      subscriptionStatuses.push(config.subscriptionStatus.ACTIVE as SubscriptionStatus);
+    }
+    if (subscriptionStatuses.length === 1) {
+      where.subscriptionStatus = subscriptionStatuses[0];
+    } else if (subscriptionStatuses.length > 1) {
+      where.subscriptionStatus = In(subscriptionStatuses);
     }
     if (typeof filters?.userId === 'number' && !Number.isNaN(filters.userId)) {
       where.userId = filters.userId;
@@ -126,19 +145,21 @@ export class SubscriptionService {
       );
       return;
     };
-    let webhookEventPayload: PaymentWebhookPayload = {
+    const webhookEventPayload: PaymentWebhookPayload = {
       subscriptionId,
       paymentId: payload.paymentId,
-      transactionId: payload.transactionId ?? null,
-      refundId: payload.refundId ?? null,
-      metaData: payload.metaData ?? {},
+      transactionId: payload.transactionId ?? undefined,
+      refundId: payload.refundId ?? undefined,
+      metaData: payload.metaData ?? undefined,
       paymentStatus: payload.paymentStatus,
       amount: payload.amount,
-      actionType: payload.actionType ?? null,
-      previousPlanId: payload.previousPlanId ?? null,
+      actionType: payload.actionType ?? undefined,
+      previousPlanId: payload.previousPlanId ?? undefined,
+      mandateId: payload.mandateId ?? undefined,
+      paymentMethodToken: payload.paymentMethodToken ?? undefined,
     };
 
-    let mandatePayload: IMandatePayload = {
+    const mandatePayload: IMandatePayload = {
       userId: subscription.user.id,
       mandateId: payload.mandateId ?? '',
       paymentMethodToken: payload.paymentMethodToken ?? '',
@@ -272,9 +293,27 @@ export class SubscriptionService {
     if (!subscription) {
       throw new NotFoundException(ERROR_MESSAGES.NO_ACTIVE_SUBSCRIPTION);
     }
-    let subscriptionId = subscription.id;
+    const subscriptionId = subscription.id;
     const fallbackProvider = (actionDto.paymentProvider ??
       config.paymentGateway.RAZORPAY) as PaymentProvider;
+
+    const requiresTargetPlan =
+      actionDto.action === config.subscriptionAction.UPDATE_PLAN ||
+      actionDto.action === config.subscriptionAction.DOWNGRADE_PLAN;
+
+    if (requiresTargetPlan && typeof actionDto.targetPlanId !== 'number') {
+      throw new BadRequestException(
+        ERROR_MESSAGES.TARGET_PLAN_NOT_FOUND,
+      );
+    }
+
+    if (
+      actionDto.action === config.subscriptionAction.UPDATE_PLAN &&
+      (typeof actionDto.amountDue !== 'number' || actionDto.amountDue <= 0)
+    ) {
+      throw new BadRequestException('Amount due is required for upgrades');
+    }
+
     switch (actionDto.action) {
       case config.subscriptionAction.CANCEL:
         this.cancelSubscription({
@@ -288,15 +327,15 @@ export class SubscriptionService {
       case config.subscriptionAction.UPDATE_PLAN:
         this.upgradeSubscription(
           subscription,
-          actionDto.targetPlanId,
-          actionDto.amountDue,
+          actionDto.targetPlanId as number,
+          actionDto.amountDue as number,
           fallbackProvider,
         );
         break
       case config.subscriptionAction.DOWNGRADE_PLAN:
         this.downgradeSubscription(
           subscription,
-          actionDto.targetPlanId,
+          actionDto.targetPlanId as number,
           fallbackProvider,
         );
         break
@@ -405,7 +444,7 @@ export class SubscriptionService {
     return this.subscriptionRepository.find({
       where: {
         isActive: true,
-        subscriptionStatus: config.subscriptionStatus.ACTIVE as SubscriptionStatus,
+        subscriptionStatus:  In([config.subscriptionStatus.ACTIVE as SubscriptionStatus, config.subscriptionStatus.CANCELED as SubscriptionStatus]),
         expiresOn: LessThanOrEqual(endOfToday),
       },
       relations: ['plan'],

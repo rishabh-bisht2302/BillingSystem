@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { webcrypto } from 'crypto';
+import { JsonParseExceptionFilter } from './common/filters/json-parse-exception.filter';
 
 // Polyfill crypto for Node 18 compatibility with @nestjs/schedule
 if (typeof globalThis.crypto === 'undefined') {
@@ -68,6 +69,8 @@ async function bootstrap() {
       defaultModelsExpandDepth: -1, // Hide schemas section
     },
   });
+
+  app.useGlobalFilters(new JsonParseExceptionFilter());
 
   await app.listen(process.env.PORT ?? 3000, () => {
     console.log(

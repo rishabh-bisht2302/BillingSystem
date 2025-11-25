@@ -1,30 +1,45 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsInt, Min } from 'class-validator';
+import {
+    IsEmail,
+    IsInt,
+    IsOptional,
+    IsString,
+    Matches,
+    MaxLength,
+    Min,
+    MinLength,
+} from 'class-validator';
 
 export class CreateUserDto {
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()
+    @MaxLength(20)
     userType?: string;
 
     @ApiPropertyOptional()
     @IsOptional()
-    @IsString()
+    @IsEmail()
     email?: string;
 
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()
+    @Matches(/^\+?[0-9]{10,15}$/, {
+        message: 'mobile must be 10-15 digits and may start with +',
+    })
     mobile?: string;
 
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()
+    @MinLength(6)
     password?: string;
 
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()
+    @MaxLength(50)
     name?: string;
 
     @ApiPropertyOptional()

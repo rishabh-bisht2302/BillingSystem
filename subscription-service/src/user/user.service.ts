@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UserProfileResponse, UpdateProfileResponse } from './interfaces/user.interface';
 import { CreateUserDto } from './dto/create.user.dto';
+import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { AuthService } from '../auth/auth.service';
 import { CacheService } from '../cache/cache.service';
@@ -90,7 +91,7 @@ export class UserService {
     return result;
   }
 
-  async updateUser(userId: number, user: UserEntity): Promise<UpdateResult> {
+  async updateUser(userId: number, user: UpdateUserAdminDto): Promise<UpdateResult> {
     const result = await this.userRepository.update(userId, { ...user });
     
     // Invalidate user cache

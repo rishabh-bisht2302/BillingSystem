@@ -10,13 +10,6 @@ export type PaymentStatus =
   | 'refunded';
 
 export class InitiatePaymentDto {
-  @ApiProperty({ description: 'Generated order identifier shared with clients' })
-  @IsString()
-  @IsNotEmpty({ message: 'Order ID is required' })
-  @MinLength(5, { message: 'Order ID must be at least 5 characters long' })
-  @MaxLength(100, { message: 'Order ID must not exceed 100 characters' })
-  orderId!: string;
-
   @ApiProperty({ description: 'Associated subscription identifier' })
   @IsNumber({}, { message: 'Subscription ID must be a number' })
   @IsPositive({ message: 'Subscription ID must be a positive number' })
@@ -29,13 +22,6 @@ export class InitiatePaymentDto {
   @Min(1, { message: 'Amount must be at least 1' })
   @Type(() => Number)
   amount!: number;
-
-  @ApiProperty({ description: 'Plan name for display on invoices' })
-  @IsString()
-  @IsNotEmpty({ message: 'Plan name is required' })
-  @MinLength(2, { message: 'Plan name must be at least 2 characters long' })
-  @MaxLength(200, { message: 'Plan name must not exceed 200 characters' })
-  planName!: string;
 
   @ApiProperty({ description: 'Plan ID for mapping plan and transaction' })
   @IsNumber({}, { message: 'Plan ID must be a number' })

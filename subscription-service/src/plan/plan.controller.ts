@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Put,
   Query,
@@ -17,6 +18,10 @@ import { ApiBearerAuth, ApiQuery, ApiTags, ApiOperation, ApiResponse, ApiBody, A
 import { AuthenticatedRequest } from 'src/interfaces/authenticated-request.interface';
 import { UpgradeQuote } from './interfaces/plan.interface';
 import { swaggerConstants } from '../config/swagger.constants';
+import { CreatePlanDto } from './dto/create-plan.dto';
+import { UpdatePlanDto } from './dto/update-plan.dto';
+import { UserPlansQueryDto } from './dto/user-plans-query.dto';
+import { UpgradeQuoteQueryDto } from './dto/upgrade-quote-query.dto';
 
 @ApiBearerAuth('access-token')
 @Controller('plans')
@@ -67,12 +72,12 @@ export class PlanController {
     summary: swaggerConstants.createPlanSummary,
     description: swaggerConstants.createPlanDescription,
   })
-  @ApiBody({ type: PlanEntity })
+  @ApiBody({ type: CreatePlanDto })
   @ApiResponse({
     status: 201,
     description: swaggerConstants.createPlanResponseDescription,
   })
-  async create(@Body() plan: Partial<PlanEntity>): Promise<PlanEntity> {
+  async create(@Body() plan: CreatePlanDto): Promise<PlanEntity> {
     return this.planService.create(plan);
   }
 
@@ -83,16 +88,16 @@ export class PlanController {
     description: swaggerConstants.updatePlanDescription,
   })
   @ApiParam({ name: 'id', description: 'Plan ID', type: Number })
-  @ApiBody({ type: PlanEntity })
+  @ApiBody({ type: UpdatePlanDto })
   @ApiResponse({
     status: 200,
     description: swaggerConstants.updatePlanResponseDescription,
   })
   async update(
-    @Param('id') id: string,
-    @Body() plan: Partial<PlanEntity>,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() plan: UpdatePlanDto,
   ): Promise<PlanEntity> {
-    return this.planService.update(Number(id), plan);
+    return this.planService.update(id, plan);
   }
 
   @ApiTags('Admin Only routes - These routes are only accessible to admin users for management tools')
@@ -106,8 +111,8 @@ export class PlanController {
     status: 200,
     description: swaggerConstants.deletePlanResponseDescription,
   })
-  async softDelete(@Param('id') id: string): Promise<PlanEntity> {
-    return this.planService.delete(Number(id));
+  async softDelete(@Param('id', ParseIntPipe) id: number): Promise<PlanEntity> {
+    return this.planService.delete(id);
   }
 
 
@@ -126,13 +131,9 @@ export class PlanController {
   })
   async getActivePlansForUser(
     @Req() req: AuthenticatedRequest,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query() pagination: UserPlansQueryDto,
   ): Promise<UserPlansResponse> {
-    return this.planService.findPlansForUser(Number(req.user.id), {
-      limit,
-      offset,
-    });
+    return this.planService.findPlansForUser(Number(req.user.id), pagination);
   }
 
   @ApiTags('User Routes - These routes are accessible to users from the application')
@@ -153,11 +154,11 @@ export class PlanController {
   })
   async getUpDateQuote(
     @Req() req: AuthenticatedRequest,
-    @Query('targetPlanId') targetPlanId: string,
+    @Query() query: UpgradeQuoteQueryDto,
   ): Promise<UpgradeQuote> {
     return this.planService.calculateUpgradeQuote(
       Number(req.user.id),
-      Number(targetPlanId),
+      Number(query.targetPlanId),
     );
   }
 }

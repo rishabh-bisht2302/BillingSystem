@@ -66,7 +66,7 @@ export class RedisEventsListener implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const isSuccess = Math.random() < 0.7;
+    const isSuccess = Math.random() < 0.9;
     payment.status = isSuccess ? config.paymentStatus.SUCCESS as PaymentStatus : config.paymentStatus.FAILED as PaymentStatus;
     payment.transactionId = payment.transactionId ?? `txn_${randomUUID()}`;
     await this.paymentRepository.save(payment);
@@ -97,7 +97,7 @@ export class RedisEventsListener implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const isSuccess = Math.random() < 0.7;
+    const isSuccess = Math.random() < 0.9;
     refund.transactionId = refund.transactionId ?? `txn_${randomUUID()}`;
     refund.status = isSuccess ? config.paymentStatus.SUCCESS as PaymentStatus : config.paymentStatus.FAILED as PaymentStatus;
     await this.refundRepository.save(refund);

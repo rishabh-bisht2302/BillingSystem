@@ -1,8 +1,15 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsEnum, IsOptional, IsPositive } from "class-validator";
-import { config } from "../../config/constants";
-import { IsString } from "class-validator";
-import { IsNumber } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  Min,
+  ValidateIf,
+} from 'class-validator';
+import { config } from '../../config/constants';
 export type SubscriptionStatus = 'active' | 'inactive' | 'paused' | 'canceled';
 
 export type PaymentProvider = 'razorpay' | 'paypal';
@@ -67,16 +74,25 @@ export class SubscriberActionDto {
 
   @ApiProperty({
     description: 'The target plan id',
-    required: true,
+    required: false,
   })
-  @IsNumber()
-  targetPlanId: number;
+  @ValidateIf(
+    (payload) =>
+      payload.action === config.subscriptionAction.UPDATE_PLAN ||
+      payload.action === config.subscriptionAction.DOWNGRADE_PLAN,
+  )
+  @IsInt()
+  @IsPositive()
+  @Min(1)
+  targetPlanId?: number;
 
   @ApiProperty({
     description: 'The amount due',
     required: false,
   })
-  @IsOptional()
+  @ValidateIf(
+    (payload) => payload.action === config.subscriptionAction.UPDATE_PLAN,
+  )
   @IsNumber()
   @IsPositive()
   amountDue?: number;

@@ -58,7 +58,7 @@ export class SubscriptionRenewalCronService {
 
     private async initiateRenewal(subscription: SubscriptionEntity): Promise<void> {
         try {
-            if (subscription.subscriptionStatus !== config.subscriptionStatus.CANCELED) {
+            if (subscription.subscriptionStatus == config.subscriptionStatus.CANCELED) {
                 await this.subscriptionService.updateSubscription(subscription.id, true as boolean);
                 return;
             };

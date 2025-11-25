@@ -103,7 +103,18 @@ plantuml docs/UpgradeSubscription.puml
 ```
 The diagram highlights how the subscription and payment services exchange HTTP requests, RabbitMQ messages, and interact with their dedicated Postgres + Redis instances.
 
-## Key User Api Flows and curls
+## API FLOWS
+    New users => User login -> update profile -> get quote -> initiate payment -> Create pending subscription -> initiate payment on paymentService -> receives webhook from paymentService -> Validate charges amount with plan -> update subscription
+
+    Upgrade => User login -> get upgrade quote -> Update subscription confirm -> New pending subscription -> init payment on paymen service with amount difference -> receives webhook from paymentService -> Validate charges amount with plan -> update subscription
+
+
+    Downgrade => User login -> get downgrade quote -> downgrade subscription confirm -> new pending subscription with inactive state -> picked by renewal cron -> Deactivate old subscription -> initiate payment with new plan price on payment service -> receives webhook from paymentService -> Validate charges amount with plan -> update subscription
+
+
+    Cancel =>  User login -> cancel -> subscription confirm -> new pending subscription with inactive state -> picked by renewal cron -> check status subscription status -> mark active active subscription as inactive
+
+## Key User Api and curls
     - Register and login
         The user is expected to login using either mobile or email and with a passoword that is store on the backed as hashkeys. Upon login, the same is retrieved and check for validation. Mobile and Email are unique in the system.
             curl -X 'POST' \
@@ -116,7 +127,7 @@ The diagram highlights how the subscription and payment services exchange HTTP r
             }'
 
         The user will be registered the first time and login with same credentials to get a token generated using JWT and is the point of reference to be used in entire project. This token should be passed on in every request as Bearer token and is valid for 2 hours.
-
+        
         Key "isProfileComplete" in response indicates if the user has provided both "email" and "mobile" or not. If this key is false, user will be blocked to subscribe any plan.
                 
     - Update Profile update
@@ -127,7 +138,7 @@ The diagram highlights how the subscription and payment services exchange HTTP r
             'http://localhost:3001/users/profile' \
             -H 'accept: */*' \
             -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiIiwidXNlcklkIjozLCJtb2JpbGUiOiJSaXNoYWJoIiwiZW1haWwiOiIiLCJ1c2VyVHlwZSI6ImN1c3RvbWVyIiwiaWF0IjoxNzY0MDc2MzAxLCJleHAiOjE3NjQwODM1MDF9.zDhIFU07P7qQFIpyiVezeWa-arNFEhT3Rg0F1BFNP84'
-
+        
         Update Profile
             curl -X 'PATCH' \
             'http://localhost:3001/users/profile' \
@@ -311,6 +322,7 @@ The diagram highlights how the subscription and payment services exchange HTTP r
     - All monetary values are denominated in USD; currency conversion is out of scope for this release.
     - The mocked payment service may respond with either `success` or `failed`, and other statuses (refunds/disputes) are   simulated in tests only.
     - Scheduled cron jobs (renewals, etc) run once per day using the configured NestJS scheduler.
+    - 90% of payments will be Successful
     - Failed refund cases are delegated to an external back-office service that consumes the `refund-failures` queue and reconciles payouts asynchronously.
     - Downgrades are scheduled for the next billing cycle, while upgrades settle the price delta immediately and extend the subscription expiry in real time.
 

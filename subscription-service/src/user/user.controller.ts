@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Put,
@@ -20,6 +21,7 @@ import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UserProfileResponse, UpdateProfileResponse } from './interfaces/user.interface';
 import { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import { CreateUserDto } from './dto/create.user.dto';
+import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
 
 @ApiBearerAuth('access-token')
 @Controller('users')
@@ -119,12 +121,15 @@ export class UserController {
     description: swaggerConstants.updateUserDescription,
   })
   @ApiParam({ name: 'id', description: 'User ID', type: Number })
-  @ApiBody({ type: UserEntity })
+  @ApiBody({ type: UpdateUserAdminDto })
   @ApiResponse({
     status: 200,
     description: swaggerConstants.updateUserResponseDescription,
   })
-  async updateUser(@Param('id') id: number, @Body() user: UserEntity): Promise<UpdateResult | undefined> {
+  async updateUser(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() user: UpdateUserAdminDto,
+  ): Promise<UpdateResult | undefined> {
     const updatedUser = await this.userService.updateUser(id, user);
     return updatedUser;
   }
@@ -140,7 +145,7 @@ export class UserController {
     status: 200,
     description: swaggerConstants.deleteUserResponseDescription,
   })
-  async deleteUser(@Param('id') id: number): Promise<UpdateResult> {
+  async deleteUser(@Param('id', ParseIntPipe) id: number): Promise<UpdateResult> {
     return await this.userService.deleteUser(id);
   }
   

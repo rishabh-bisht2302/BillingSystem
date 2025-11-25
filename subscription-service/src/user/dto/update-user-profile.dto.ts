@@ -5,7 +5,7 @@ import {
   IsInt,
   Min,
   IsEmail,
-  IsMobilePhone,
+  Matches,
 } from 'class-validator';
 
 export class UpdateUserProfileDto {
@@ -17,7 +17,7 @@ export class UpdateUserProfileDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
-  @Min(0)
+  @Min(5)
   age?: number;
 
   @ApiPropertyOptional()
@@ -30,7 +30,9 @@ export class UpdateUserProfileDto {
       'Provide only if you originally registered with an email account. Once set, the mobile number cannot be changed.',
   })
   @IsOptional()
-  @IsMobilePhone()
+  @Matches(/^\+?[0-9]{10,15}$/, {
+    message: 'mobile must be 10-15 digits and may start with +',
+  })
   mobile?: string;
 
   @ApiPropertyOptional({

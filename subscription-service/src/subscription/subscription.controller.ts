@@ -23,12 +23,6 @@ import { swaggerConstants } from '../config/swagger.constants';
 export class SubscriptionController {
   constructor(private readonly subscriptionService: SubscriptionService) {}
 
-  private parseBoolean(value?: string): boolean | undefined {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return undefined;
-  };
-
   @ApiTags('Admin Only routes - These routes are only accessible to admin users for management tools')
   @Get('all')
   @ApiOperation({
@@ -43,8 +37,12 @@ export class SubscriptionController {
     @Query() query: GetSubscriptionsQueryDto,
   ): Promise<SubscriptionEntity[]> {
     return this.subscriptionService.findAll({
-      isActive: this.parseBoolean(query.isActive),
+      isActive: query.isActive === 'true' ? true : query.isActive === 'false' ? false : undefined,
+      isPaused: query.isPaused === 'true' ? true : query.isPaused === 'false' ? false : undefined,
+      isCanceled: query.isCanceled === 'true' ? true : query.isCanceled === 'false' ? false : undefined,
+      isRenewed: query.isRenewed === 'true' ? true : query.isRenewed === 'false' ? false : undefined,
       userId: query.userId ? Number(query.userId) : undefined,
+      planId: query.planId ? Number(query.planId) : undefined,
       fromDate: query.from ? new Date(query.from) : undefined,
       toDate: query.to ? new Date(query.to) : undefined,
     });

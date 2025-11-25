@@ -31,11 +31,16 @@ export class GetSubscriptionsQueryDto {
   @IsNumberString()
   userId?: string;
 
-  @ApiPropertyOptional({ type: String, description: 'ISO date' })
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @IsNumberString()
+  planId?: string;
+
+  @ApiPropertyOptional({ type: String, description: 'ISO date (inclusive)' })
   @IsOptional()
   from?: string;
 
-  @ApiPropertyOptional({ type: String, description: 'ISO date' })
+  @ApiPropertyOptional({ type: String, description: 'ISO date (inclusive)' })
   @IsOptional()
   to?: string;
 }
