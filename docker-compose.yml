@@ -46,6 +46,8 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.13-management
+    security_opt:
+      - seccomp=unconfined
     container_name: billing-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
@@ -53,6 +55,11 @@ services:
     ports:
       - '${RABBITMQ_PORT:-5672}:5672'
       - '${RABBITMQ_MANAGEMENT_PORT:-15672}:15672'
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   subscription-service:
     build:
@@ -63,7 +70,7 @@ services:
       subscription-db:
         condition: service_healthy
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
     env_file:
