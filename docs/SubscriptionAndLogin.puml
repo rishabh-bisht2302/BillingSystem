@@ -1,0 +1,84 @@
+@startuml name
+title Subscription & Payment - High Level Flow
+
+actor User
+
+box "Subscription Service (NestJS)" #LightBlue
+  participant SubscriptionAPI
+  participant PaymentWebhookConsumer
+end box
+
+database SubscriptionDB
+database PaymentDB
+
+box "Payment Service (NestJS)" #LightGreen
+  participant PaymentAPI
+end box
+
+entity "Payment Gateway (Simulated)" as PaymentGateway
+queue RabbitMQ
+
+== Authentication ==
+User -> SubscriptionAPI : Login / Register
+SubscriptionAPI --> User : JWT Token
+
+== Profile & Plans ==
+User -> SubscriptionAPI : Fetch Profile
+SubscriptionAPI -> SubscriptionDB : Read User Profile
+SubscriptionDB --> SubscriptionAPI
+SubscriptionAPI --> User : Profile Data
+
+User -> SubscriptionAPI : Get Active Plans
+SubscriptionAPI -> SubscriptionDB : Fetch Plans
+SubscriptionDB --> SubscriptionAPI
+SubscriptionAPI --> User : Available Plans
+
+== Subscription Purchase ==
+User -> SubscriptionAPI : Request Payment Quote
+SubscriptionAPI --> User : Amount to Pay
+
+User -> SubscriptionAPI : Initiate Payment
+SubscriptionAPI -> PaymentAPI : Create Payment Order
+
+activate PaymentAPI
+PaymentAPI -> PaymentDB : Insert Payment Record
+PaymentAPI -> PaymentGateway : Simulate Payment (Redis TTL / triggers)
+PaymentGateway --> PaymentAPI : Payment Status Event
+PaymentAPI -> PaymentDB : Update Payment Status
+PaymentAPI --> SubscriptionAPI : Webhook Callback
+deactivate PaymentAPI
+
+== Webhook Handling (Synchronous) ==
+SubscriptionAPI -> SubscriptionDB : Store Webhook Payload
+SubscriptionAPI -> RabbitMQ : Publish Payment Event
+
+== Async Processing (Consumer) ==
+PaymentWebhookConsumer <- RabbitMQ : Consume Payment Event
+activate PaymentWebhookConsumer
+
+alt Payment Successful
+  PaymentWebhookConsumer -> SubscriptionDB : Update Subscription (status=active)
+  PaymentWebhookConsumer --> SubscriptionAPI : Confirm Success
+
+else Payment Failed
+  PaymentWebhookConsumer -> SubscriptionDB : Update Subscription (status=failed)
+
+  == Refund Flow ==
+  PaymentWebhookConsumer -> PaymentAPI : Initiate Refund
+  activate PaymentAPI
+  PaymentAPI -> PaymentDB : Insert Refund Record
+  PaymentAPI -> PaymentGateway : Simulate Refund (TTL)
+  PaymentGateway --> PaymentAPI : Refund Status Event
+  PaymentAPI -> PaymentDB : Update Refund Status
+  PaymentAPI --> SubscriptionAPI : Refund Webhook Callback
+  deactivate PaymentAPI
+
+  PaymentWebhookConsumer --> SubscriptionAPI : Confirm Failure + Refund Update
+end
+
+deactivate PaymentWebhookConsumer
+
+== Final Response ==
+SubscriptionAPI -> User : Email / Status Notification
+
+@enduml

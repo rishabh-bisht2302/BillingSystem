@@ -1,0 +1,76 @@
+@startuml name
+title Subscription & Payment - High Level Flow (Downgrade + Renewal)
+
+actor User
+
+box "Subscription Service (NestJS)" #LightBlue
+  participant SubscriptionAPI
+  participant SubscriptionRenewalJob
+  participant PaymentWebhookConsumer
+end box
+
+database SubscriptionDB
+database PaymentDB
+
+box "Payment Service (NestJS)" #LightGreen
+  participant PaymentAPI
+end box
+
+entity "Payment Gateway (Simulated)" as PaymentGateway
+queue RabbitMQ
+
+== Authentication ==
+User -> SubscriptionAPI : Login
+SubscriptionAPI --> User : JWT Token
+
+== Subscription Downgrade Request ==
+activate SubscriptionAPI
+User -> SubscriptionAPI : Request Payment Quote
+SubscriptionAPI --> User : Amount to Pay (0 for downgrade)
+
+User -> SubscriptionAPI : Confirm Downgrade
+SubscriptionAPI -> SubscriptionDB : Create new subscription (status=pending)
+SubscriptionAPI -> SubscriptionDB : Map new subscription with user
+deactivate SubscriptionAPI
+
+== Renewal / Downgrade Cron Job ==
+activate SubscriptionRenewalJob
+SubscriptionRenewalJob -> SubscriptionDB : Scan expired subscriptions
+SubscriptionRenewalJob -> SubscriptionDB : Scan downgraded subscriptions
+SubscriptionRenewalJob --> SubscriptionAPI : Trigger payment flow (if needed)
+deactivate SubscriptionRenewalJob
+
+== Payment Processing ==
+activate PaymentAPI
+PaymentAPI -> PaymentDB : Insert Payment Record
+PaymentAPI -> PaymentGateway : Simulate Payment (Redis TTL)
+PaymentGateway --> PaymentAPI : Payment Status Event
+PaymentAPI -> PaymentDB : Update Payment Status
+PaymentAPI --> SubscriptionAPI : Payment Webhook Callback
+deactivate PaymentAPI
+
+== Webhook Handling ==
+activate SubscriptionAPI
+SubscriptionAPI -> SubscriptionDB : Save Webhook Payload
+SubscriptionAPI -> RabbitMQ : Publish Payment Event
+deactivate SubscriptionAPI
+
+== Async Processing ==
+PaymentWebhookConsumer <- RabbitMQ : Consume Payment Event
+activate PaymentWebhookConsumer
+
+alt Payment Successful
+  PaymentWebhookConsumer -> SubscriptionDB : Activate downgraded subscription
+  PaymentWebhookConsumer -> SubscriptionDB : Deactivate previous subscription
+
+else Payment Failed
+  PaymentWebhookConsumer -> SubscriptionDB : Deactivate downgraded subscription
+  PaymentWebhookConsumer -> SubscriptionDB : Restore previous subscription
+end
+
+deactivate PaymentWebhookConsumer
+
+== Final Response ==
+SubscriptionAPI -> User : Email Notification / Status Update
+
+@enduml
