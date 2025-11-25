@@ -10,6 +10,7 @@ import { SubscriptionService } from '../subscription/subscription.service';
 import { AuthService } from '../auth/auth.service';
 import { CacheService } from '../cache/cache.service';
 import { ERROR_MESSAGES } from '../config/custom.messages';
+import { hashPassword } from '../utils/password.util';
 
 @Injectable()
 export class UserService {
@@ -30,8 +31,12 @@ export class UserService {
     return this.userRepository.find({ where: finalFilters });
   }
 
-  async createUser(user: CreateUserDto): Promise<UserEntity> { 
-    const newUser = await this.userRepository.save(user);
+  async createUser(user: CreateUserDto): Promise<UserEntity> {
+    const payload: Partial<UserEntity> = { ...user };
+    delete (payload as any).password;
+    const rawPassword = user.password ?? `TempPass#${Date.now()}`;
+    payload.passwordHash = await hashPassword(rawPassword);
+    const newUser = await this.userRepository.save(payload);
     // Invalidate users list cache
     await this.cacheService.invalidateAllUsers();
     return newUser;
@@ -92,7 +97,12 @@ export class UserService {
   }
 
   async updateUser(userId: number, user: UpdateUserAdminDto): Promise<UpdateResult> {
-    const result = await this.userRepository.update(userId, { ...user });
+    const payload: Partial<UserEntity> = { ...user };
+    if (user.password) {
+      payload.passwordHash = await hashPassword(user.password);
+      delete (payload as any).password;
+    }
+    const result = await this.userRepository.update(userId, payload);
     
     // Invalidate user cache
     await this.cacheService.invalidateUserProfile(userId);
